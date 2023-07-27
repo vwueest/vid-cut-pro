@@ -202,6 +202,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.setWindowTitle("VidCutPro")
-    window.resize(800, 300)
+    window.resize(500, 300)
     window.show()
     sys.exit(app.exec_())
