@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog
-from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtCore import Qt, QMimeData, QTimer
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor
 import subprocess
 from datetime import datetime, timedelta
@@ -24,20 +24,22 @@ class DropArea(QLabel):
             file_path = event.mimeData().urls()[0].toLocalFile()
             self.file_path = file_path
             self.setText(f"File: {file_path}")
-            
-            try:
-                command = 'flatpak run io.mpv.Mpv "%s"'%file_path
-                subprocess.run(command, shell=True, check=True)
-            except:
-                try:
-                    command = 'mpv "%s"'%file_path
-                    subprocess.run(command, shell=True, check=True)
-                except subprocess.CalledProcessError as e:
-                    print("Error executing the command: %s"%command)
-                else:
-                    print("Bash command executed successfully")
-            
             event.acceptProposedAction()
+            
+            QTimer.singleShot(500, lambda: self.open_video_playback(file_path))
+    
+    def open_video_playback(self, file_path):
+        try:
+            command = 'flatpak run io.mpv.Mpv "%s"'%file_path
+            subprocess.run(command, shell=True, check=True)
+        except:
+            try:
+                command = 'mpv "%s"'%file_path
+                subprocess.run(command, shell=True, check=True)
+            except subprocess.CalledProcessError as e:
+                print("Error executing the command: %s"%command)
+            else:
+                print("Bash command executed successfully")
 
 class MainWindow(QMainWindow):
     def __init__(self):
