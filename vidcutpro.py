@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog
 from PyQt5.QtCore import Qt, QMimeData, QTimer
@@ -27,17 +28,19 @@ class DropArea(QLabel):
             event.acceptProposedAction()
             
             # Open the video playback after a delay of 500ms
-            QTimer.singleShot(500, lambda: self.open_video_playback(file_path))
+            QTimer.singleShot(50, lambda: 3) 
+            self.open_video_playback(file_path)
     
     def open_video_playback(self, file_path):
         try:
             # Try to open the video file using the flatpak version of mpv
-            command = 'flatpak run io.mpv.Mpv "%s"'%file_path
+            command = ['flatpak', 'run', 'io.mpv.Mpv', file_path]
+            subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             subprocess.run(command, shell=True, check=True)
         except:
             try:
                 # If the flatpak version is not available, try to use the system version of mpv
-                command = 'mpv "%s"'%file_path
+                command = ['mpv', file_path]
                 subprocess.run(command, shell=True, check=True)
             except subprocess.CalledProcessError as e:
                 print("Error executing the command: %s"%command)
@@ -105,7 +108,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.cut_button)
 
         # Connect button click event to the function that executes the bash command
-        self.cut_button.clicked.connect(self.execute_bash_command)
+        self.cut_button.clicked.connect(self.cutting_file_with_ffmpeg)
 
     def reformat_time_string(self, input_time):
         # Check if the input_time contains a colon
@@ -180,7 +183,7 @@ class MainWindow(QMainWindow):
         base_name, file_extension = os.path.splitext(file_path)
         return base_name, file_extension
 
-    def execute_bash_command(self):
+    def cutting_file_with_ffmpeg(self):
         # Replace the command with your desired bash command
         start_time = datetime.strptime(self.reformat_time_string(self.start_time_edit.text()), '%H:%M:%S.%f')
         end_time = datetime.strptime(self.reformat_time_string(self.end_time_edit.text()), '%H:%M:%S.%f')
@@ -193,6 +196,10 @@ class MainWindow(QMainWindow):
             self.format_duration_or_datetime(start_time),
             self.format_duration_or_datetime(duration),
             file_out_path)
+        
+        self.cut_button.setText("Cutting...")
+        QTimer.singleShot(50, lambda: 3)
+        self.cut_button.setText("Done!")
 
         try:
             subprocess.run(command, shell=True, check=True)
