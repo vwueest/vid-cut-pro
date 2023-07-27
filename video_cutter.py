@@ -26,14 +26,17 @@ class DropArea(QLabel):
             self.setText(f"File: {file_path}")
             event.acceptProposedAction()
             
+            # Open the video playback after a delay of 500ms
             QTimer.singleShot(500, lambda: self.open_video_playback(file_path))
     
     def open_video_playback(self, file_path):
         try:
+            # Try to open the video file using the flatpak version of mpv
             command = 'flatpak run io.mpv.Mpv "%s"'%file_path
             subprocess.run(command, shell=True, check=True)
         except:
             try:
+                # If the flatpak version is not available, try to use the system version of mpv
                 command = 'mpv "%s"'%file_path
                 subprocess.run(command, shell=True, check=True)
             except subprocess.CalledProcessError as e:
