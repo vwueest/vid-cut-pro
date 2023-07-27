@@ -6,4 +6,4 @@ Easy video cutting tool in python using Qt and MPV
 
 ## Build instructions
 
-To create the executable, simply run `pyinstaller vid_cut_pro.py --onefile --noconsole`
+To create the executable, simply run `pyinstaller vidcutpro.py --onefile --noconsole`
