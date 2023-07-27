@@ -1,5 +1,7 @@
 # VidCutPro
 
-![logo](./logo.svg)
+<img src="./logo.svg" alt="logo" width="25%">
 
-easy video cutting tool in python using Qt and MPV
+Easy video cutting tool in python using Qt and MPV
+
+![screenshot](./screenshot.png)
