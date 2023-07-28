@@ -125,7 +125,7 @@ class MainWindow(QMainWindow):
         command = '%s "%s"'%(open_cmd, file_path)
 
         try:
-            subprocess.run(command, shell=True, check=True)
+            subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except:
             print("Couldn't open video file")
 
@@ -215,26 +215,30 @@ class MainWindow(QMainWindow):
 
     def cutting_file_with_ffmpeg(self):
         # Replace the command with your desired bash command
-        start_time = datetime.strptime(self.reformat_time_string(self.start_time_edit.text()), '%H:%M:%S.%f')
-        end_time = datetime.strptime(self.reformat_time_string(self.end_time_edit.text()), '%H:%M:%S.%f')
-        duration = end_time - start_time
+        start_time_string = self.reformat_time_string(self.start_time_edit.text())
+        end_time_string = self.reformat_time_string(self.end_time_edit.text())
         file_in_base, file_in_extension = self.separate_file_extension(self.file_label.file_path)
         file_out_path = file_in_base + '_cut' + file_in_extension
         
         # don't cut if start and end time are None
-        if (start_time is None) and (end_time is None):
+        if (start_time_string is None) and (end_time_string is None):
             return False
         
         # check if both start and end time are valid
-        if start_time is None:
+        if start_time_string is None:
             start_time = "00:00:00.000"
-        if end_time is None:
+        if end_time_string is None:
             end_time = "99:99:99.999"
-        
+
+        start_time = datetime.strptime(start_time_string, '%H:%M:%S.%f')
+        end_time = datetime.strptime(end_time_string, '%H:%M:%S.%f')
+        duration = end_time - start_time
+        duration_string = self.format_duration_or_datetime(duration)
+
         command = 'ffmpeg -i "%s" -ss %s -t %s -c copy "%s" -y'%(
             self.file_label.file_path,
-            self.format_duration_or_datetime(start_time),
-            self.format_duration_or_datetime(duration),
+            start_time_string,
+            duration_string,
             file_out_path)
         # cut video
         try:
@@ -257,10 +261,9 @@ class MainWindow(QMainWindow):
             file_out_path_speedup = file_in_base + '_speedup' + file_in_extension
             
             # speed up video
-            # command = 'ffmpeg -i "%s" -vf "setpts=1.0/%.5f*PTS" -an "%s" -y'%(
-            command = 'FILE_IN=%s; SPEEDUP=%.5f; FILE_OUT=%s; VIDEO_FPS=$(ffmpeg -i "${FILE_IN}" 2>&1 | grep -oP "(?<=, )\d+(.\d+)?(?= fps)") && ffmpeg -i ${FILE_IN} -filter:v "setpts=PTS/${SPEEDUP},fps=${SPEEDUP}*${VIDEO_FPS}" -an "${FILE_OUT}" -y'%(
+            command = 'FILE_IN=%s; SLOW_DOWN_FACTOR=%.5f; FILE_OUT=%s; ffmpeg -itsscale ${SLOW_DOWN_FACTOR} -i "${FILE_IN}" -map 0:v -c:v copy "${FILE_OUT}" -y'%(
                 file_out_path_cut,
-                speed_up_factor,
+                1.0/speed_up_factor,
                 file_out_path_speedup)
             try:
                 subprocess.run(command, shell=True, check=True)
