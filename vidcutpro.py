@@ -6,11 +6,19 @@ from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor
 import subprocess
 from datetime import datetime, timedelta
 import os
+import platform
+from enum import Enum
 
+class OperatingSystem(Enum):
+    MACOS = "macOS"
+    LINUX = "Linux"
+    WINDOWS = "Windows"
+    UNKNOWN = "Unknown"
 
 class DropArea(QLabel):
     def __init__(self, parent):
         super().__init__("Drag and drop a file here", parent)
+        self.parent = parent
         self.file_path = ""
         self.setAlignment(Qt.AlignCenter)
         self.setAcceptDrops(True)
@@ -24,32 +32,18 @@ class DropArea(QLabel):
         if event.mimeData().hasUrls():
             file_path = event.mimeData().urls()[0].toLocalFile()
             self.file_path = file_path
-            self.setText(f"File: {file_path}")
+            self.setText("File: %s"%file_path)
             event.acceptProposedAction()
             
             # Open the video playback after a delay of 500ms
             QTimer.singleShot(50, lambda: 3) 
-            self.open_video_playback(file_path)
-    
-    def open_video_playback(self, file_path):
-        try:
-            # Try to open the video file using the flatpak version of mpv
-            command = ['flatpak', 'run', 'io.mpv.Mpv', file_path]
-            subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            subprocess.run(command, shell=True, check=True)
-        except:
-            try:
-                # If the flatpak version is not available, try to use the system version of mpv
-                command = ['mpv', file_path]
-                subprocess.run(command, shell=True, check=True)
-            except subprocess.CalledProcessError as e:
-                print("Error executing the command: %s"%command)
-            else:
-                print("Bash command executed successfully")
+            self.parent.open_video_playback(file_path)
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.os = self.get_operating_system()
         
         use_nordic_palette = False
         if use_nordic_palette:
@@ -89,12 +83,14 @@ class MainWindow(QMainWindow):
         timestamp_widget = QWidget(self)
         timestamp_layout = QHBoxLayout(timestamp_widget)
 
+        # start area
         self.start_label = QLabel("Start:", self)
         timestamp_layout.addWidget(self.start_label)
 
         self.start_time_edit = QLineEdit(self)
         timestamp_layout.addWidget(self.start_time_edit)
 
+        # end area
         self.end_label = QLabel("End:", self)
         timestamp_layout.addWidget(self.end_label)
 
@@ -103,12 +99,46 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(timestamp_widget)
 
+        # speed up factor area
+        self.speed_up_label = QLabel("Speed up factor:", self)
+        timestamp_layout.addWidget(self.speed_up_label)
+
+        self.speed_up_edit = QLineEdit(self)
+        self.speed_up_edit.setText("1.0") 
+        timestamp_layout.addWidget(self.speed_up_edit)
+
+        main_layout.addWidget(timestamp_widget)
+
         # Part 3: Cut button area
         self.cut_button = QPushButton("Cut", self)
         main_layout.addWidget(self.cut_button)
 
         # Connect button click event to the function that executes the bash command
-        self.cut_button.clicked.connect(self.cutting_file_with_ffmpeg)
+        self.cut_button.clicked.connect(self.process_video)
+
+    def open_video_playback(self, file_path):
+        if self.os == OperatingSystem.MACOS:
+            open_cmd = 'open'
+        elif self.os == OperatingSystem.LINUX:
+            open_cmd = 'xdg-open'
+        
+        command = '%s "%s"'%(open_cmd, file_path)
+
+        try:
+            subprocess.run(command, shell=True, check=True)
+        except:
+            print("Couldn't open video file")
+
+    def get_operating_system(self):
+        system = platform.system()
+        if system == "Darwin":
+            return OperatingSystem.MACOS
+        elif system == "Linux":
+            return OperatingSystem.LINUX
+        elif system == "Windows":
+            return OperatingSystem.WINDOWS
+        else:
+            return OperatingSystem.UNKNOWN
 
     def reformat_time_string(self, input_time):
         # Check if the input_time contains a colon
@@ -191,6 +221,16 @@ class MainWindow(QMainWindow):
         file_in_base, file_in_extension = self.separate_file_extension(self.file_label.file_path)
         file_out_path = file_in_base + '_cut' + file_in_extension
         
+        # don't cut if start and end time are None
+        if (start_time is None) and (end_time is None):
+            return False
+        
+        # check if both start and end time are valid
+        if start_time is None:
+            start_time = "00:00:00.000"
+        if end_time is None:
+            end_time = "99:99:99.999"
+        
         command = 'ffmpeg -i "%s" -ss %s -t %s -c copy "%s" -y'%(
             self.file_label.file_path,
             self.format_duration_or_datetime(start_time),
@@ -199,14 +239,52 @@ class MainWindow(QMainWindow):
         
         self.cut_button.setText("Cutting...")
         QTimer.singleShot(50, lambda: 3)
-        self.cut_button.setText("Done!")
 
+        # cut video
         try:
             subprocess.run(command, shell=True, check=True)
+            self.cut_button.setText("Done!")
         except subprocess.CalledProcessError as e:
             print("Error executing the command: %s"%self.file_label.file_path)
-        else:
-            subprocess.run("notify-send 'Cutting done!'", shell=True, check=True)
+            self.cut_button.setText("Error!")
+
+        return True
+
+    def speed_up_video(self, file_got_cut=True):
+        speed_up_factor = float(self.speed_up_edit.text())
+        if speed_up_factor != 1.0:
+            file_in_base, file_in_extension = self.separate_file_extension(self.file_label.file_path)
+            if file_got_cut:
+                file_out_path_cut = file_in_base + '_cut' + file_in_extension
+            else:
+                file_out_path_cut = self.file_label.file_path
+
+            file_out_path_speedup = file_in_base + '_speedup' + file_in_extension
+            
+            # speed up video
+            command = 'ffmpeg -i "%s" -vf "setpts=1.0/%.5f*PTS" -an "%s" -y'%(
+                file_out_path_cut,
+                speed_up_factor,
+                file_out_path_speedup)
+            try:
+                subprocess.run(command, shell=True, check=True)
+                if file_got_cut:
+                    subprocess.run('rm "%s"'%file_out_path_cut, shell=True, check=True)
+            except subprocess.CalledProcessError as e:
+                print("Error executing the command: %s"%self.file_label.file_path)
+
+    def process_video(self):
+        video_cut = self.cutting_file_with_ffmpeg()
+        self.speed_up_video(video_cut)
+
+        # notify user of termination
+        try:
+            if self.os == OperatingSystem.LINUX:
+                subprocess.run("notify-send 'Cutting done!'", shell=True, check=True)
+            elif self.os == OperatingSystem.MACOS:
+                subprocess.run("terminal-notifier -title 'VidCutPro' -message 'Cutting done! '", shell=True, check=True)
+        except:
+            pass
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
