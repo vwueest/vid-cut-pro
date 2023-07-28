@@ -236,14 +236,9 @@ class MainWindow(QMainWindow):
             self.format_duration_or_datetime(start_time),
             self.format_duration_or_datetime(duration),
             file_out_path)
-        
-        self.cut_button.setText("Cutting...")
-        QTimer.singleShot(50, lambda: 3)
-
         # cut video
         try:
             subprocess.run(command, shell=True, check=True)
-            self.cut_button.setText("Done!")
         except subprocess.CalledProcessError as e:
             print("Error executing the command: %s"%self.file_label.file_path)
             self.cut_button.setText("Error!")
@@ -262,7 +257,8 @@ class MainWindow(QMainWindow):
             file_out_path_speedup = file_in_base + '_speedup' + file_in_extension
             
             # speed up video
-            command = 'ffmpeg -i "%s" -vf "setpts=1.0/%.5f*PTS" -an "%s" -y'%(
+            # command = 'ffmpeg -i "%s" -vf "setpts=1.0/%.5f*PTS" -an "%s" -y'%(
+            command = 'FILE_IN=%s; SPEEDUP=%.5f; FILE_OUT=%s; VIDEO_FPS=$(ffmpeg -i "${FILE_IN}" 2>&1 | grep -oP "(?<=, )\d+(.\d+)?(?= fps)") && ffmpeg -i ${FILE_IN} -filter:v "setpts=PTS/${SPEEDUP},fps=${SPEEDUP}*${VIDEO_FPS}" -an "${FILE_OUT}" -y'%(
                 file_out_path_cut,
                 speed_up_factor,
                 file_out_path_speedup)
@@ -274,8 +270,10 @@ class MainWindow(QMainWindow):
                 print("Error executing the command: %s"%self.file_label.file_path)
 
     def process_video(self):
+        self.cut_button.setText("Processing..."); self.cut_button.repaint()
         video_cut = self.cutting_file_with_ffmpeg()
         self.speed_up_video(video_cut)
+        self.cut_button.setText("Done!"); self.cut_button.repaint()
 
         # notify user of termination
         try:
