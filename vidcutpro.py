@@ -6,7 +6,13 @@ import subprocess
 from datetime import datetime, timedelta
 import os
 import platform
+from enum import Enum
 
+class OperatingSystem(Enum):
+    MACOS = "macOS"
+    LINUX = "Linux"
+    WINDOWS = "Windows"
+    UNKNOWN = "Unknown"
 
 class DropArea(QLabel):
     def __init__(self, parent):
@@ -35,7 +41,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.operating_system = self.get_operating_system()
+        self.os = self.get_operating_system()
         
         use_nordic_palette = False
         if use_nordic_palette:
@@ -109,9 +115,9 @@ class MainWindow(QMainWindow):
         self.cut_button.clicked.connect(self.process_video)
 
     def open_video_playback(self, file_path):
-        if self.operating_system == 'macOS':
+        if self.os == OperatingSystem.MACOS:
             open_cmd = 'open'
-        elif self.operating_system == 'Linux':
+        elif self.os == OperatingSystem.LINUX:
             open_cmd = 'xdg-open'
         
         command = '%s "%s"'%(open_cmd, file_path)
@@ -124,13 +130,13 @@ class MainWindow(QMainWindow):
     def get_operating_system(self):
         system = platform.system()
         if system == "Darwin":
-            return "macOS"
+            return OperatingSystem.MACOS
         elif system == "Linux":
-            return "Linux"
+            return OperatingSystem.LINUX
         elif system == "Windows":
-            return "Windows"
+            return OperatingSystem.WINDOWS
         else:
-            return "Unknown"
+            return OperatingSystem.UNKNOWN
 
     def reformat_time_string(self, input_time):
         # Check if the input_time contains a colon
@@ -270,9 +276,9 @@ class MainWindow(QMainWindow):
 
         # notify user of termination
         try:
-            if self.operating_system == 'Linux':
+            if self.os == OperatingSystem.LINUX:
                 subprocess.run("notify-send 'Cutting done!'", shell=True, check=True)
-            elif self.operating_system == 'macOS':
+            elif self.os == OperatingSystem.MACOS:
                 subprocess.run("terminal-notifier -title 'VidCutPro' -message 'Cutting done! '", shell=True, check=True)
         except:
             pass
