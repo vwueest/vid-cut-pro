@@ -213,7 +213,7 @@ class MainWindow(QMainWindow):
         base_name, file_extension = os.path.splitext(file_path)
         return base_name, file_extension
 
-    def cutting_file_with_ffmpeg(self):
+    def get_command_cutting_file_with_ffmpeg(self):
         # Replace the command with your desired bash command
         start_time_string = self.reformat_time_string(self.start_time_edit.text())
         end_time_string = self.reformat_time_string(self.end_time_edit.text())
@@ -222,7 +222,7 @@ class MainWindow(QMainWindow):
         
         # don't cut if start and end time are None
         if (start_time_string is None) and (end_time_string is None):
-            return False
+            return '', self.file_label.file_path
         
         # check if both start and end time are valid
         if start_time_string is None:
@@ -235,47 +235,70 @@ class MainWindow(QMainWindow):
         duration = end_time - start_time
         duration_string = self.format_duration_or_datetime(duration)
 
-        command = 'ffmpeg -i "%s" -ss %s -t %s -c copy "%s" -y'%(
+        command = 'ffmpeg -i "%s" -ss %s -t %s -c copy "%s" -y; '%(
             self.file_label.file_path,
             start_time_string,
             duration_string,
             file_out_path)
-        # cut video
+        
+        return command, file_out_path
+
+    def speed_up_and_cut_video(self):
+        # command to cut video
+        command_cut, file_out_path_cut = self.get_command_cutting_file_with_ffmpeg()
+        
+        # speed up video
+        speed_up_factor = float(self.speed_up_edit.text())
+        if speed_up_factor != 1.0:
+            file_in_base, file_in_extension = self.separate_file_extension(self.file_label.file_path)
+            file_out_path = file_in_base + '_speedup' + file_in_extension
+            
+            # speed up video
+            if (speed_up_factor >= 0.5) and (speed_up_factor <= 100.0):
+                # if speed up factor is between 0.5 and 100, speed up video and audio
+                file_audio_path = file_in_base + '_audio.aac'
+                file_audio_speedup_path = file_in_base + '_audio_speedup.aac'
+                file_intermediate = file_in_base + '_intermediate' + file_in_extension
+                command = command_cut + 'FILE_OUT_CUT=%s; SLOW_DOWN_FACTOR=%.5f; FILE_INTERMEDIATE=%s; FILE_AUDIO=%s; FILE_AUDIO_SPEEDUP=%s; FILE_OUT=%s; '%(
+                    file_out_path_cut,
+                    1.0/speed_up_factor,
+                    file_intermediate,
+                    file_audio_path,
+                    file_audio_speedup_path,
+                    file_out_path)
+                # speed up video without audio
+                command += 'ffmpeg -itsscale ${SLOW_DOWN_FACTOR} -i "${FILE_OUT_CUT}" -map 0:v -c:v copy "${FILE_INTERMEDIATE}" -y; '
+                # extract audio
+                command += 'ffmpeg -i "${FILE_OUT_CUT}" -vn -acodec copy "${FILE_AUDIO}" -y; '
+                # speed up audio
+                command += 'ffmpeg -i "${FILE_AUDIO}" -filter:a "atempo=1/${SLOW_DOWN_FACTOR}" "${FILE_AUDIO_SPEEDUP}" -y; '
+                # merge audio and video
+                command += 'ffmpeg -i "${FILE_INTERMEDIATE}" -i "${FILE_AUDIO_SPEEDUP}" -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 "${FILE_OUT}" -y; '
+                # remove intermediate files
+                command += 'rm "${FILE_INTERMEDIATE}" "${FILE_AUDIO}" "${FILE_AUDIO_SPEEDUP}"; '
+            else:
+                # if speed up factor is not between 0.5 and 100, speed up video only
+                # set variables
+                command = command_cut + 'FILE_OUT_CUT=%s; SLOW_DOWN_FACTOR=%.5f; FILE_OUT=%s; '%(
+                    file_out_path_cut,
+                    1.0/speed_up_factor,
+                    file_out_path)
+                # speed up video without audio
+                command += 'ffmpeg -itsscale ${SLOW_DOWN_FACTOR} -i "${FILE_OUT_CUT}" -map 0:v -c:v copy "${FILE_OUT}" -y; '
+            # delete cut file if exists
+            if command_cut != '':
+                command += 'rm "${FILE_OUT_CUT}"; '
+        else:
+            command = command_cut
+
         try:
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             print("Error executing the command: %s"%self.file_label.file_path)
-            self.cut_button.setText("Error!")
-
-        return True
-
-    def speed_up_video(self, file_got_cut=True):
-        speed_up_factor = float(self.speed_up_edit.text())
-        if speed_up_factor != 1.0:
-            file_in_base, file_in_extension = self.separate_file_extension(self.file_label.file_path)
-            if file_got_cut:
-                file_out_path_cut = file_in_base + '_cut' + file_in_extension
-            else:
-                file_out_path_cut = self.file_label.file_path
-
-            file_out_path_speedup = file_in_base + '_speedup' + file_in_extension
-            
-            # speed up video
-            command = 'FILE_IN=%s; SLOW_DOWN_FACTOR=%.5f; FILE_OUT=%s; ffmpeg -itsscale ${SLOW_DOWN_FACTOR} -i "${FILE_IN}" -map 0:v -c:v copy "${FILE_OUT}" -y'%(
-                file_out_path_cut,
-                1.0/speed_up_factor,
-                file_out_path_speedup)
-            try:
-                subprocess.run(command, shell=True, check=True)
-                if file_got_cut:
-                    subprocess.run('rm "%s"'%file_out_path_cut, shell=True, check=True)
-            except subprocess.CalledProcessError as e:
-                print("Error executing the command: %s"%self.file_label.file_path)
 
     def process_video(self):
         self.cut_button.setText("Processing..."); self.cut_button.repaint()
-        video_cut = self.cutting_file_with_ffmpeg()
-        self.speed_up_video(video_cut)
+        self.speed_up_and_cut_video()
         self.cut_button.setText("Done!"); self.cut_button.repaint()
 
         # notify user of termination
