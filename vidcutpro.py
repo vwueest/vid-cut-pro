@@ -2,12 +2,15 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog
 from PyQt5.QtCore import Qt, QMimeData, QTimer
-from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor
+from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor, QIcon
 import subprocess
 from datetime import datetime, timedelta
 import os
 import platform
 from enum import Enum
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 
 class OperatingSystem(Enum):
     MACOS = "macOS"
@@ -226,9 +229,9 @@ class MainWindow(QMainWindow):
         
         # check if both start and end time are valid
         if start_time_string is None:
-            start_time = "00:00:00.000"
+            start_time_string = "00:00:00.000"
         if end_time_string is None:
-            end_time = "99:99:99.999"
+            end_time_string = "23:59:59.99"
 
         start_time = datetime.strptime(start_time_string, '%H:%M:%S.%f')
         end_time = datetime.strptime(end_time_string, '%H:%M:%S.%f')
@@ -312,6 +315,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(os.path.join(basedir, 'icon.png')))
     window = MainWindow()
     window.setWindowTitle("VidCutPro")
     window.resize(500, 300)

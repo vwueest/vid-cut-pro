@@ -6,7 +6,8 @@ Easy video cutting tool in python using Qt and MPV
 
 ## Build instructions
 (currently not working)
-To create the executable, simply run `sudo cp $(which ffmpeg) .; rm -r vidcutpro vidcutpro.spec build dist; pyinstaller --clean --noconfirm --add-binary "ffmpeg:." vidcutpro.py --onefile --noconsole`
+To create the executable, simply run `sudo cp $(which ffmpeg) .; pyinstaller vidcutpro.spec -y`.
+The executable will be in the `dist` folder.
 
 ## Installation
 

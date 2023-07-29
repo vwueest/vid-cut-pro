@@ -1,7 +1,6 @@
 .history/
 build/
 dist/
-*.spec
 *.desktop
 ffmpeg
 .DS_Store
