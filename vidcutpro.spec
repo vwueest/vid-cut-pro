@@ -44,7 +44,8 @@ exe = EXE(
 )
 app = BUNDLE(
     exe,
-    name='vidcutpro.app',
-    icon=None,
+    name='VidCutPro.app',
+    icon='icon.png',
+    console=False,
     bundle_identifier=None,
 )
