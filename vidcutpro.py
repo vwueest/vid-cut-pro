@@ -3,7 +3,6 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFileDialog
 from PyQt5.QtCore import Qt, QMimeData, QTimer
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent, QPalette, QColor, QIcon
-import subprocess
 from datetime import datetime, timedelta
 import os
 import platform
@@ -127,10 +126,8 @@ class MainWindow(QMainWindow):
         elif self.os == OperatingSystem.LINUX:
             open_cmd = 'xdg-open'
         
-        command = '%s "%s"'%(open_cmd, file_path)
-
         try:
-            subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            os.system(f'{open_cmd} "{file_path}"')
         except:
             print("Couldn't open video file")
 
@@ -232,37 +229,91 @@ class MainWindow(QMainWindow):
         duration = end_time - start_time
         duration_string = self.format_duration_or_datetime(duration)
         
+        file_in_path = self.file_label.file_path
+        suffix = ''
+
+        speed_up_factor = float(self.speed_up_edit.text())
+        
         # get file paths
         file_in_base, file_in_extension = self.separate_file_extension(self.file_label.file_path)
         
-        # get suffix and video_io_stream
-        suffix = ""
-        input_args = {}
-        output_args = {}
+        # get file paths
+        file_in_base, file_in_extension = os.path.splitext(file_in_path)
 
-        # cut if asked for
-        if not((start_time_string == "00:00:00.000") and (end_time_string == "23:59:59.99")):
-            suffix += "_cut"
-            input_args.update({'ss': start_time_string, 't': duration_string})
+        # check if speed up factor is between 0.5 and 100
+        if (0.5 <= speed_up_factor <= 100) and (speed_up_factor != 1.0):
+            file_audio_path = file_in_base + '_audio.aac'
+            file_audio_speedup_path = file_in_base + '_audio_speedup.aac'
+            file_video_speedup_path = file_in_base + '_video_speedup' + file_in_extension
+            file_intermediate = file_in_base + '_intermediate' + file_in_extension
+    
+            # cut video
+            if not((start_time_string == "00:00:00.000") and (end_time_string == "23:59:59.99")):
+                do_cut = True
+                suffix += '_cut'
+                input_args = {'ss': start_time_string, 't': duration_string}
+                output_args = {'c': 'copy', 'y': None}
+                input_stream = ffmpeg.input(file_in_path, **input_args)
+                output_stream = ffmpeg.output(input_stream, file_intermediate, **output_args)
+                output_stream.run()
+            else:
+                do_cut = False
+                file_intermediate = file_in_path
 
-        # speed up if asked for
-        speed_up_factor = float(self.speed_up_edit.text())
-        if speed_up_factor != 1.0:
-            # output file path
+            # speed up video without audio
+            input_args = {'itsscale': 1.0/speed_up_factor}
+            output_args = {'c:v': 'copy', 'an': None, 'y': None}
+            input_stream = ffmpeg.input(file_intermediate, **input_args)
+            output_stream = ffmpeg.output(input_stream, file_video_speedup_path, **output_args)
+            output_stream.run()
+
+            # extract audio
+            input_args = {}
+            output_args = {'vn': None, 'acodec': 'copy', 'y': None}
+            input_stream = ffmpeg.input(file_intermediate, **input_args)
+            output_stream = ffmpeg.output(input_stream, file_audio_path, **output_args)
+            output_stream.run()
+
+            # speed up audio
+            input_args = {}
+            output_args = {'filter:a': f'atempo={speed_up_factor}', 'y': None}
+            input_stream = ffmpeg.input(file_audio_path, **input_args)
+            output_stream = ffmpeg.output(input_stream, file_audio_speedup_path, **output_args)
+            output_stream.run()
+
+            # merge audio and video
             suffix += '_speedup'
             file_out_path = file_in_base + suffix + file_in_extension
+            input_args = {}
+            output_args = {'c:v': 'copy', 'c:a': 'aac', 'map': '0:v:0', 'map': '1:a:0', 'y': None}
+            input_video_stream = ffmpeg.input(file_video_speedup_path, **input_args)
+            input_audio_stream = ffmpeg.input(file_audio_speedup_path, **input_args)
+            output_stream = ffmpeg.output(input_video_stream, input_audio_stream, file_out_path, **output_args)
+            output_stream.run()
 
-            input_args.update({'itsscale': 1.0/speed_up_factor})
-            output_args.update({'c': 'copy', 'an': None})
+            # remove intermediate files
+            if do_cut:
+                os.remove(file_intermediate)
+            os.remove(file_video_speedup_path)
+            os.remove(file_audio_path)
+            os.remove(file_audio_speedup_path)
         else:
-            # output file path
-            file_out_path = file_in_base + suffix + file_in_extension
-            
-            output_args.update({'c': 'copy'})
-
-        input_stream = ffmpeg.input(self.file_label.file_path, **input_args)
-        output_stream = ffmpeg.output(input_stream, file_out_path, **output_args)
-        output_stream.run()
+            # speed up or cut video without audio
+            input_args = {}
+            output_args = {'c': 'copy', 'y': None}
+            if not((start_time_string == "00:00:00.000") and (end_time_string == "23:59:59.99")):
+                input_args.update({'ss': start_time_string, 't': duration_string})
+                suffix += '_cut'
+            if speed_up_factor != 1.0:
+                input_args.update({'itsscale': 1.0/speed_up_factor, 'an': None})
+                suffix += '_speedup'
+            if input_args:
+                file_out_path = file_in_base + suffix + file_in_extension
+                input_stream = ffmpeg.input(file_in_path, **input_args)
+                output_stream = ffmpeg.output(input_stream, file_out_path, **output_args)
+                output_stream.run()
+            else:
+                os.rename(file_in_path, file_out_path)
 
     def process_video(self):
         self.cut_button.setText("Processing..."); self.cut_button.repaint()
@@ -272,9 +323,9 @@ class MainWindow(QMainWindow):
         # notify user of termination
         try:
             if self.os == OperatingSystem.LINUX:
-                subprocess.run("notify-send 'Cutting done!'", shell=True, check=True)
+                os.system("notify-send 'Cutting done!'")
             elif self.os == OperatingSystem.MACOS:
-                subprocess.run("terminal-notifier -title 'VidCutPro' -message 'Cutting done! '", shell=True, check=True)
+                os.system("osascript -e 'display notification \"Cutting done!\" with title \"VidCutPro\"'")
         except:
             pass
 
