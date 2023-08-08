@@ -10,14 +10,17 @@ from enum import Enum
 import ffmpeg
 
 
+# Get the directory where this script is located
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-
+# Define an enumeration for operating systems
 class OperatingSystem(Enum):
     MACOS = "macOS"
     LINUX = "Linux"
     WINDOWS = "Windows"
     UNKNOWN = "Unknown"
+
+# Custom QLabel for handling file drops
 
 class DropArea(QLabel):
     def __init__(self, parent):
@@ -29,17 +32,19 @@ class DropArea(QLabel):
         self.setStyleSheet("border: 2px dashed gray; padding: 10px; color: gray;")
 
     def dragEnterEvent(self, event: QDragEnterEvent):
+        # Accept the drag event if it contains file URLs
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
     def dropEvent(self, event: QDropEvent):
+        # Get the local file path of the dropped file
         if event.mimeData().hasUrls():
             file_path = event.mimeData().urls()[0].toLocalFile()
             self.file_path = file_path
             self.setText("File: %s"%file_path)
             event.acceptProposedAction()
             
-            # Open the video playback after a delay of 500ms
+            # Open the video playback after a delay of 50ms
             QTimer.singleShot(50, lambda: 3) 
             self.parent.open_video_playback(file_path)
 
@@ -60,18 +65,17 @@ class MainWindow(QMainWindow):
             nordic_palette.setColor(QPalette.WindowText, QColor("#D8DEE9"))      # Text color
             nordic_palette.setColor(QPalette.Base, QColor("#3B4252"))            # Base color
             nordic_palette.setColor(QPalette.AlternateBase, QColor("#434C5E"))   # Alternate base color
-            nordic_palette.setColor(QPalette.ToolTipBase, QColor("#D8DEE9"))      # ToolTip background color
-            nordic_palette.setColor(QPalette.ToolTipText, QColor("#2E3440"))      # ToolTip text color
-            nordic_palette.setColor(QPalette.Text, QColor("#E5E9F0"))             # Text color
+            nordic_palette.setColor(QPalette.ToolTipBase, QColor("#D8DEE9"))     # ToolTip background color
+            nordic_palette.setColor(QPalette.ToolTipText, QColor("#2E3440"))     # ToolTip text color
+            nordic_palette.setColor(QPalette.Text, QColor("#E5E9F0"))            # Text color
             nordic_palette.setColor(QPalette.Button, QColor("#4C566A"))          # Button color
             nordic_palette.setColor(QPalette.ButtonText, QColor("#E5E9F0"))      # Button text color
-            nordic_palette.setColor(QPalette.BrightText, QColor("#ECEFF4"))       # Bright text color
+            nordic_palette.setColor(QPalette.BrightText, QColor("#ECEFF4"))      # Bright text color
             nordic_palette.setColor(QPalette.Link, QColor("#88C0D0"))            # Link color
             nordic_palette.setColor(QPalette.Highlight, QColor("#5E81AC"))       # Highlight color
-            nordic_palette.setColor(QPalette.HighlightedText, QColor("#ECEFF4"))  # Highlighted text color
-
+            nordic_palette.setColor(QPalette.HighlightedText, QColor("#ECEFF4")) # Highlighted text color
             self.setPalette(nordic_palette)
-        
+
         # Create the main widget
         main_widget = QWidget(self)
         self.setCentralWidget(main_widget)
@@ -121,18 +125,23 @@ class MainWindow(QMainWindow):
         self.cut_button.clicked.connect(self.process_video)
 
     def open_video_playback(self, file_path):
+        # Determine the appropriate command to open the file based on the operating system
         if self.os == OperatingSystem.MACOS:
             open_cmd = 'open'
         elif self.os == OperatingSystem.LINUX:
             open_cmd = 'xdg-open'
         
         try:
+            # Use the appropriate command to open the file
             os.system(f'{open_cmd} "{file_path}"')
         except:
+            # Handle errors if the file cannot be opened
             print("Couldn't open video file")
 
     def get_operating_system(self):
+        # Get the name of the current operating system
         system = platform.system()
+        # Map the system name to an OperatingSystem enum value
         if system == "Darwin":
             return OperatingSystem.MACOS
         elif system == "Linux":
@@ -316,11 +325,18 @@ class MainWindow(QMainWindow):
                 os.rename(file_in_path, file_out_path)
 
     def process_video(self):
-        self.cut_button.setText("Processing..."); self.cut_button.repaint()
-        self.speed_up_and_cut_video()
-        self.cut_button.setText("Done!"); self.cut_button.repaint()
+        # Update button text during processing
+        self.cut_button.setText("Processing...")
+        self.cut_button.repaint()
 
-        # notify user of termination
+        # Call function to speed up and cut video
+        self.speed_up_and_cut_video()
+
+        # Update button text when processing is done
+        self.cut_button.setText("Done!")
+        self.cut_button.repaint()
+
+        # Notify the user of the process completion
         try:
             if self.os == OperatingSystem.LINUX:
                 os.system("notify-send 'Cutting done!'")
@@ -329,11 +345,19 @@ class MainWindow(QMainWindow):
         except:
             pass
 
+# Entry point for the application
 if __name__ == "__main__":
+    # Create the application instance
     app = QApplication(sys.argv)
+
+    # Set the application icon
     app.setWindowIcon(QIcon(os.path.join(basedir, 'icon.png')))
+
+    # Create the main window
     window = MainWindow()
     window.setWindowTitle("VidCutPro")
     window.resize(500, 300)
     window.show()
+
+    # Run the application event loop
     sys.exit(app.exec_())
