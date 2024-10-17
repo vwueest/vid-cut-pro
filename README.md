@@ -1,4 +1,4 @@
-<img src="./assets/logo3.svg" alt="logo" width="50%">
+<img src="./assets/logo.svg" alt="logo" width="50%">
 
 Easy video cutting and speed up / slow down tool based on ffmpeg. Extremely fast editing without loss of video quality!
 
