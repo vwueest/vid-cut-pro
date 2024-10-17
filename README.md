@@ -34,7 +34,7 @@ rm ${HOME}/.local/bin/vidcutpro
 rm ${HOME}/.local/share/icons/hicolor/512x512/apps/vidcutpro.png
 rm ${HOME}/.local/share/applications/vidcutpro.desktop
 
-ln -s ${PWD}/dist/VidCutPro ${HOME}/.local/bin/vidcutpro
-ln -s ${PWD}/assets/logo3.png ${HOME}/.local/share/icons/hicolor/512x512/apps/vidcutpro.png
-ln -s ${PWD}/vidcutpro.desktop ${HOME}/.local/share/applications/vidcutpro.desktop
+cp -s ${PWD}/dist/VidCutPro ${HOME}/.local/bin/vidcutpro
+cp -s ${PWD}/assets/logo3.png ${HOME}/.local/share/icons/hicolor/512x512/apps/vidcutpro.png
+cp -s ${PWD}/vidcutpro.desktop ${HOME}/.local/share/applications/vidcutpro.desktop
 ```
