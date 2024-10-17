@@ -251,8 +251,6 @@ class MainWindow(QMainWindow):
 
         # check if speed up factor is between 0.5 and 100
         if (0.5 <= speed_up_factor <= 100) and (speed_up_factor != 1.0):
-            file_audio_path = file_in_base + '_audio.aac'
-            file_audio_speedup_path = file_in_base + '_audio_speedup.aac'
             file_video_speedup_path = file_in_base + '_video_speedup' + file_in_extension
             file_intermediate = file_in_base + '_intermediate' + file_in_extension
     
@@ -276,12 +274,30 @@ class MainWindow(QMainWindow):
             output_stream = ffmpeg.output(input_stream, file_video_speedup_path, **output_args)
             output_stream.run()
 
-            # extract audio
-            input_args = {}
-            output_args = {'vn': None, 'acodec': 'copy', 'y': None}
-            input_stream = ffmpeg.input(file_intermediate, **input_args)
-            output_stream = ffmpeg.output(input_stream, file_audio_path, **output_args)
-            output_stream.run()
+            # # extract audio
+            # input_args = {}
+            # output_args = {'vn': None, 'acodec': 'copy', 'y': None}
+            # input_stream = ffmpeg.input(file_intermediate, **input_args)
+            # output_stream = ffmpeg.output(input_stream, file_audio_path, **output_args)
+            # output_stream.run()
+            
+            probe = ffmpeg.probe(file_intermediate)
+            audio_streams = [stream for stream in probe['streams'] if stream['codec_type'] == 'audio']
+            stream = audio_streams[0]
+            codec = stream['codec_name']
+            if codec == 'aac':
+                extension = 'aac'
+            elif codec == 'opus':
+                extension = 'opus'
+            elif codec == 'mp3':
+                extension = 'mp3'
+            elif codec == 'pcm_s16le':
+                extension = 'wav'
+            else:
+                extension = 'unknown'
+            file_audio_path = file_in_base + '_audio' + '.' + extension
+            file_audio_speedup_path = file_in_base + '_audio_speedup' + '.' + extension
+            ffmpeg.input(file_intermediate).output(file_audio_path, map=f'0:a:0', acodec='copy').run()
 
             # speed up audio
             input_args = {}
@@ -294,7 +310,7 @@ class MainWindow(QMainWindow):
             suffix += '_speedup'
             file_out_path = file_in_base + suffix + file_in_extension
             input_args = {}
-            output_args = {'c:v': 'copy', 'c:a': 'aac', 'map': '0:v:0', 'map': '1:a:0', 'y': None}
+            output_args = {'c:v': 'copy', 'c:a': 'copy', 'map': '0:v:0', 'map': '1:a:0', 'y': None}
             input_video_stream = ffmpeg.input(file_video_speedup_path, **input_args)
             input_audio_stream = ffmpeg.input(file_audio_speedup_path, **input_args)
             output_stream = ffmpeg.output(input_video_stream, input_audio_stream, file_out_path, **output_args)

@@ -7,7 +7,7 @@ block_cipher = None
 a = Analysis(
     ['vidcutpro.py'],
     pathex=[],
-    binaries=[('ffmpeg', '.')],
+    binaries=[],
     datas=[('icon.png', '.')],
     hiddenimports=[],
     hookspath=[],
