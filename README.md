@@ -13,10 +13,12 @@ If you would like to create a standalone executable, you can do so by running `p
 The executable will be in the `dist` folder and is roughly 70 MB in size.
 
 ## Installation instructions
-First build the binary with the build instruction. To install it, move to the git repo and run:
+You can create an application menu entry for easy access to the application. 
+First build the binary with the build instruction.
+To install it, change to the git repo and run:
 
 ``` bash
-# creates desktop file according to your home directory
+# creates desktop file in the current directory according to your home directory
 echo "[Desktop Entry]
 Version=1.0
 Name=VidCutPro
