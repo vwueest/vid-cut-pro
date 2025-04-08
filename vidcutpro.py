@@ -367,7 +367,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     # Set the application icon
-    app.setWindowIcon(QIcon(os.path.join(basedir, 'icon.png')))
+    app.setWindowIcon(QIcon(os.path.join(basedir, 'assets/logo.png')))
 
     # Create the main window
     window = MainWindow()

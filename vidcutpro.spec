@@ -8,7 +8,7 @@ a = Analysis(
     ['vidcutpro.py'],
     pathex=[],
     binaries=[],
-    datas=[('icon.png', '.')],
+    datas=[('assets/logo.png', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -18,6 +18,7 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
+    optimize=True,
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
@@ -45,7 +46,7 @@ exe = EXE(
 app = BUNDLE(
     exe,
     name='VidCutPro.app',
-    icon='icon.png',
+    icon='assets/logo.png',
     console=False,
     bundle_identifier=None,
 )
