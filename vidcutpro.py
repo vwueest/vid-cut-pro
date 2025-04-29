@@ -54,8 +54,8 @@ class MainWindow(QMainWindow):
 
         self.os = self.get_operating_system()
         
-        use_nordic_palette = False
-        if use_nordic_palette:
+        color_palette = '' # leave emtpy for default
+        if color_palette == 'nordic':
             # Set the "Fusion" style for the application
             QApplication.setStyle("Fusion")
 
@@ -75,6 +75,26 @@ class MainWindow(QMainWindow):
             nordic_palette.setColor(QPalette.Highlight, QColor("#5E81AC"))       # Highlight color
             nordic_palette.setColor(QPalette.HighlightedText, QColor("#ECEFF4")) # Highlighted text color
             self.setPalette(nordic_palette)
+        elif color_palette == 'mint-y-aqua':
+            # Set the "Fusion" style for the application
+            QApplication.setStyle("Fusion")
+            
+            # Configure the palette to match the mint-y-dark theme
+            mint_y_dark_palette = QPalette()
+            mint_y_dark_palette.setColor(QPalette.Window, QColor("#383838"))           # Background color
+            mint_y_dark_palette.setColor(QPalette.WindowText, QColor("#e7e7e7"))       # Text color
+            mint_y_dark_palette.setColor(QPalette.Base, QColor("#404040"))             # Base color
+            mint_y_dark_palette.setColor(QPalette.AlternateBase, QColor("#3B3F45"))    # Alternate base color
+            mint_y_dark_palette.setColor(QPalette.ToolTipBase, QColor("#e7e7e7"))      # ToolTip background color
+            mint_y_dark_palette.setColor(QPalette.ToolTipText, QColor("#383838"))      # ToolTip text color
+            mint_y_dark_palette.setColor(QPalette.Text, QColor("#E0F2F1"))             # Text color
+            mint_y_dark_palette.setColor(QPalette.Button, QColor("#454545"))           # Button color
+            mint_y_dark_palette.setColor(QPalette.ButtonText, QColor("#e7e7e7"))       # Button text color
+            mint_y_dark_palette.setColor(QPalette.BrightText, QColor("#FFFFFF"))       # Bright text color
+            mint_y_dark_palette.setColor(QPalette.Link, QColor("#64FFDA"))             # Link color
+            mint_y_dark_palette.setColor(QPalette.Highlight, QColor("#1f9ede"))        # Highlight color
+            mint_y_dark_palette.setColor(QPalette.HighlightedText, QColor("#FFFFFF"))  # Highlighted text color
+            self.setPalette(mint_y_dark_palette)
 
         # Create the main widget
         main_widget = QWidget(self)
