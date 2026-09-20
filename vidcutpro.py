@@ -385,6 +385,10 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     # Create the application instance
     app = QApplication(sys.argv)
+    # Wayland takes the dock icon from the app_id, which Qt otherwise sets to the
+    # interpreter name ("python3"), matching no .desktop file. setWindowIcon below
+    # is ignored there; it still covers X11.
+    app.setDesktopFileName("vidcutpro")
 
     # Set the application icon
     app.setWindowIcon(QIcon(os.path.join(basedir, 'assets/logo.png')))
