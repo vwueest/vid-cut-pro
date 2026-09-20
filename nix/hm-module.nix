@@ -47,6 +47,15 @@ let
     exec ${pythonEnv}/bin/python3 ${../vidcutpro.py} "$@"
   '';
 
+  # Installed as a package, not home.file: Qt builds its icon search paths from
+  # XDG_DATA_DIRS plus ~/.icons and never looks in ~/.local/share/icons, so an
+  # icon placed there is invisible to Qt-based docks and panels even though
+  # fuzzel and GTK find it. The home-manager profile is on XDG_DATA_DIRS.
+  iconPackage = pkgs.runCommand "vidcutpro-icon" { } ''
+    install -Dm644 ${../assets/logo.png} \
+      $out/share/icons/hicolor/512x512/apps/vidcutpro.png
+  '';
+
   desktopEntry = pkgs.makeDesktopItem {
     name = "vidcutpro";
     desktopName = "VidCutPro";
@@ -75,11 +84,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.packages = [ desktopEntry ];
+    home.packages = [ desktopEntry iconPackage ];
 
     home.file.".local/bin/vidcutpro".source = launcher;
-
-    home.file.".local/share/icons/hicolor/512x512/apps/vidcutpro.png".source =
-      ../assets/logo.png;
   };
 }
