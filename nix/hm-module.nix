@@ -2,7 +2,7 @@
 #
 #   # ~/.config/home-manager/home.nix (or wherever your config lives)
 #   {
-#     imports = [ (import /home/you/src/vid-cut-pro/nix/hm-module.nix) ];
+#     imports = [ (import ./path/to/vid-cut-pro/nix/hm-module.nix) ];
 #     programs.vidcutpro.enable = true;
 #   }
 #
@@ -10,7 +10,7 @@
 #
 #   let
 #     vidcutpro = builtins.fetchGit {
-#       url = "git+ssh://git@github.com/vwueest/vid-cut-pro.git";
+#       url = "git+ssh://git@github.com/<owner>/vid-cut-pro.git";
 #       ref = "main";
 #     };
 #   in { imports = [ (import "${vidcutpro}/nix/hm-module.nix") ]; }
